@@ -1,6 +1,7 @@
 console.log("init");
-// var alpha, beta, gamma;
 var deviceQuaternion;
+var deviceOrientationEulers = new THREE.Vector3();
+var gravityDirection = new THREE.Vector3();
 
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
@@ -42,11 +43,13 @@ cube.position.x = 0;
 cube.position.y = 0;
 cube.position.z = 0;
 
+// var deviceOrientation = new THREE.DeviceOrientationControls(camera);
+
 // camera.position = new THREE.Vector3(0, 0, 5);
 // console.log("sumpin");
 camera.position.x = 0;
 camera.position.y = 0;
-camera.position.z = 10;
+camera.position.z = 5;
 
 var animate = function () {
 	geometry.colorsNeedUpdate = true;
@@ -56,17 +59,21 @@ var animate = function () {
 	// cube.position.x += 0.01;
 
 	if(deviceQuaternion != undefined) {
+
+		// var conjugatedDeviceQuaternion = deviceQuaternion.conjugate();
 		// var rotObjectMatrix = new THREE.Matrix4();
-		// rotObjectMatrix.makeRotationFromQuaternion(deviceQuaternion);
+		// rotObjectMatrix.makeRotationFromQuaternion(conjugatedDeviceQuaternion);
 		// cube.quaternion.setFromRotationMatrix(rotObjectMatrix);
 
-		// cube.quaternion = deviceQuaternion;
-		// cube.rotation.Quaternion = deviceQuaternion;
+		// cube.setRotationFromQuaternion(deviceQuaternion);
 
-		// cube.rotation.setEulerFromQuaternion(deviceQuaternion);
-		cube.setRotationFromQuaternion(deviceQuaternion);
+		console.log("grav" + gravityDirection.x + ", " + gravityDirection.y + ", " + gravityDirection.z);
+		cube.lookAt(gravityDirection);
 	}
 
+	// cube.rotation.x = deviceOrientationEulers.x;
+	// cube.rotation.y = deviceOrientationEulers.y;
+	// cube.rotation.z = deviceOrientationEulers.z;
 
 	// cube.rotation.x += 0.01;
 	// cube.rotation.y += 0.01;
@@ -76,20 +83,27 @@ var animate = function () {
 
 animate();
 
+window.addEventListener("devicemotion", function(event) {
+	var accelerationVector = new THREE.Vector3(event.acceleration.x, event.acceleration.y, event.acceleration.z);
+
+	console.log("acc" + accelerationVector.x + ", " + accelerationVector.y + ", " + accelerationVector.z);
+	console.log("acc grav" + event.accelerationIncludingGravity.x + ", " + event.accelerationIncludingGravity.y + ", " + event.accelerationIncludingGravity.z);
+	var accelerationGravityVector = new THREE.Vector3(event.accelerationIncludingGravity.x, event.accelerationIncludingGravity.y, event.accelerationIncludingGravity.z);
+
+	gravityDirection = accelerationGravityVector.sub(accelerationVector);
+});
+
 window.addEventListener("deviceorientation", function(event) {
-	alpha = event.alpha;
-	beta = event.beta;
-	gamma = event.gamma;
+
+	deviceOrientationEulers = new THREE.Vector3(degToRad(event.beta), degToRad(event.gamma), degToRad(event.alpha));
+	// console.log("device eulers: " + deviceOrientationEulers.x + ", " + deviceOrientationEulers.y + ", " + deviceOrientationEulers.z);
+
 	deviceQuaternion = computeQuaternionFromEulers(event.alpha, event.beta, event.gamma);
-	console.log("device quat: " + deviceQuaternion.x + ", " + deviceQuaternion.y + ", " + deviceQuaternion.z + ", " + deviceQuaternion.w);
+	// console.log("device quat: " + deviceQuaternion.x + ", " + deviceQuaternion.y + ", " + deviceQuaternion.z + ", " + deviceQuaternion.w);
 
 }, true);
 
 var computeQuaternionFromEulers = function(alpha,beta,gamma) {
-	// var x = degToRad(beta); // beta value
-	// var y = degToRad(gamma); // gamma value
-	// var z = degToRad(alpha); // alpha value
-
 	var x = degToRad(beta); // beta value
 	var y = degToRad(gamma); // gamma value
 	var z = degToRad(alpha); // alpha value
