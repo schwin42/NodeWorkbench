@@ -1,5 +1,6 @@
 console.log("init");
 var deviceQuaternion;
+var lastDeviceQuaternion = new THREE.Quaternion(0, 0, 0, 0);
 var deviceOrientationEulers = new THREE.Vector3();
 var gravityDirection = new THREE.Vector3();
 
@@ -23,25 +24,31 @@ var negY = new THREE.Color(0.6, 1, 0.6); //Light green
 var posZ = new THREE.Color(0, 0, 1); //Blue
 var negZ = new THREE.Color(0.6, 0.6, 1); //Light blue
 
-geometry.faces[0].color = posX;
-geometry.faces[1].color = posX;
-geometry.faces[2].color = negX;
-geometry.faces[3].color = negX;
-geometry.faces[4].color = posY;
-geometry.faces[5].color = posY;
-geometry.faces[6].color = negY;
-geometry.faces[7].color = negY;
-geometry.faces[8].color = posZ;
-geometry.faces[9].color = posZ;
-geometry.faces[10].color = negZ;
-geometry.faces[11].color = negZ;
+var createCube = function(position) {
+	geometry.faces[0].color = posX;
+	geometry.faces[1].color = posX;
+	geometry.faces[2].color = negX;
+	geometry.faces[3].color = negX;
+	geometry.faces[4].color = posY;
+	geometry.faces[5].color = posY;
+	geometry.faces[6].color = negY;
+	geometry.faces[7].color = negY;
+	geometry.faces[8].color = posZ;
+	geometry.faces[9].color = posZ;
+	geometry.faces[10].color = negZ;
+	geometry.faces[11].color = negZ;
 
-var cube = new THREE.Mesh( geometry, material );
-scene.add( cube );
+	var cube = new THREE.Mesh( geometry, material );
+	scene.add( cube );
 
-cube.position.x = 0;
-cube.position.y = 0;
-cube.position.z = 0;
+	cube.position.x = 0;
+	cube.position.y = 0;
+	cube.position.z = 0;
+
+	return cube;
+}
+
+var cube = createCube(new THREE.Vector3(0, 0, 0));
 
 // var deviceOrientation = new THREE.DeviceOrientationControls(camera);
 
@@ -58,17 +65,27 @@ var animate = function () {
 	// cube.position.y += 0.01;
 	// cube.position.x += 0.01;
 
+
+
 	if(deviceQuaternion != undefined) {
 
-		// var conjugatedDeviceQuaternion = deviceQuaternion.conjugate();
+		// console.log("device quat: " + deviceQuaternion);
+		if(!lastDeviceQuaternion.equals(deviceQuaternion)) {
+			lastDeviceQuaternion = deviceQuaternion.clone();
+			var conjugate = deviceQuaternion.clone()
+			conjugate = conjugate.conjugate();
+			cube.setRotationFromQuaternion(conjugate);
+		}
+
+
 		// var rotObjectMatrix = new THREE.Matrix4();
 		// rotObjectMatrix.makeRotationFromQuaternion(conjugatedDeviceQuaternion);
 		// cube.quaternion.setFromRotationMatrix(rotObjectMatrix);
 
-		// cube.setRotationFromQuaternion(deviceQuaternion);
 
-		console.log("grav" + gravityDirection.x + ", " + gravityDirection.y + ", " + gravityDirection.z);
-		cube.lookAt(gravityDirection);
+
+		// console.log("grav" + gravityDirection.x + ", " + gravityDirection.y + ", " + gravityDirection.z);
+		// cube.lookAt(gravityDirection);
 	}
 
 	// cube.rotation.x = deviceOrientationEulers.x;
@@ -86,8 +103,8 @@ animate();
 window.addEventListener("devicemotion", function(event) {
 	var accelerationVector = new THREE.Vector3(event.acceleration.x, event.acceleration.y, event.acceleration.z);
 
-	console.log("acc" + accelerationVector.x + ", " + accelerationVector.y + ", " + accelerationVector.z);
-	console.log("acc grav" + event.accelerationIncludingGravity.x + ", " + event.accelerationIncludingGravity.y + ", " + event.accelerationIncludingGravity.z);
+	//console.log("acc" + accelerationVector.x + ", " + accelerationVector.y + ", " + accelerationVector.z);
+	//console.log("acc grav" + event.accelerationIncludingGravity.x + ", " + event.accelerationIncludingGravity.y + ", " + event.accelerationIncludingGravity.z);
 	var accelerationGravityVector = new THREE.Vector3(event.accelerationIncludingGravity.x, event.accelerationIncludingGravity.y, event.accelerationIncludingGravity.z);
 
 	gravityDirection = accelerationGravityVector.sub(accelerationVector);
@@ -127,3 +144,4 @@ var computeQuaternionFromEulers = function(alpha,beta,gamma) {
 var degToRad = function(theta) {
 	return theta * (Math.PI / 180);
 }
+
