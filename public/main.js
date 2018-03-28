@@ -1,4 +1,5 @@
 console.log("init");
+
 var deviceQuaternion;
 var lastDeviceQuaternion = new THREE.Quaternion(0, 0, 0, 0);
 var deviceOrientationEulers = new THREE.Vector3();
@@ -72,7 +73,7 @@ var animate = function () {
 		// console.log("device quat: " + deviceQuaternion);
 		if(!lastDeviceQuaternion.equals(deviceQuaternion)) {
 			lastDeviceQuaternion = deviceQuaternion.clone();
-			var conjugate = deviceQuaternion.clone()
+			var conjugate = deviceQuaternion.clone();
 			conjugate = conjugate.conjugate();
 			cube.setRotationFromQuaternion(conjugate);
 		}
