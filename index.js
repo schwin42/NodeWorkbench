@@ -12,8 +12,8 @@ const https = require('https');
 const port = 8080;
 https.createServer(options, app).listen(port);
 
+app.use(express.static('jsfeat_space'));
 // app.use(express.static('public'));
-app.use(express.static('js_feat'));
 
 app.listen(function () {
     console.log('Node workbench listening on ' + port);

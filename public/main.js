@@ -61,7 +61,7 @@ camera.position.y = 0;
 camera.position.z = 5;
 
 var render = function () {
-
+	console.log("in render");
 	geometry.colorsNeedUpdate = true;
 	requestAnimationFrame( render );
 
@@ -71,13 +71,10 @@ var render = function () {
 		cube.position.x = position.x;
 		cube.position.y = position.y;
 		cube.position.z = position.z;
-		// cube.position.set(position);
 		lastPosition = position;
 	}
 
 	if(deviceQuaternion != undefined) {
-
-		// console.log("device quat: " + deviceQuaternion);
 		if(!lastDeviceQuaternion.equals(deviceQuaternion)) {
 			lastDeviceQuaternion = deviceQuaternion.clone();
 			var conjugate = deviceQuaternion.clone();
@@ -89,6 +86,7 @@ var render = function () {
 	renderer.render(scene, camera);
 };
 
+console.log("pre render");
 render();
 
 // window.addEventListener("devicemotion", function(event) {

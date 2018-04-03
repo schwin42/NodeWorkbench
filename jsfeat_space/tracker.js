@@ -2,7 +2,18 @@ console.log("init");
 
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
-var renderer = new THREE.WebGLRenderer();
+
+var renderer, cube, deviceQuaternion;
+var lastDeviceQuaternion = new THREE.Quaternion(0, 0, 0, 0);
+
+var geometry = new THREE.BoxGeometry( 1, 1, 1 );
+var material = new THREE.MeshBasicMaterial( { 
+    color: 0xffffff,
+    vertexColors: THREE.FaceColors
+} );
+
+var position = new THREE.Vector3(0, 0, 0);
+var lastPosition = new THREE.Vector3(-1, -1, -1);
 
 var posX = new THREE.Color(1, 0, 0); //Red
 var negX = new THREE.Color(1, .6, .6); //Light red
@@ -14,11 +25,7 @@ var negZ = new THREE.Color(0.6, 0.6, 1); //Light blue
 
 
 var createCube = function(position) {
-    var geometry = new THREE.BoxGeometry( 1, 1, 1 );
-	var material = new THREE.MeshBasicMaterial( { 
-		color: 0xffffff,
-		vertexColors: THREE.FaceColors
-	} );
+
 
 	geometry.faces[0].color = posX;
 	geometry.faces[1].color = posX;
@@ -48,7 +55,9 @@ $(window).load(function() {
 
     // lets do some fun
     var video = document.getElementById('webcam');
-    var canvas = document.getElementById('canvas');
+    var videoCanvas = document.getElementById('videoCanvas');
+    var arCanvas = document.getElementById('arCanvas');
+
     try {
         var attempts = 0;
         var readyListener = function(event) {
@@ -73,18 +82,20 @@ $(window).load(function() {
 
 
             //Three JS Init
-
-            // var renderer = new THREE.WebGLRenderer( { alpha: true } );
+            // renderer = new THREE.WebGLRenderer( { canvas: arCanvas } );
+            renderer = new THREE.WebGLRenderer( { canvas: arCanvas, alpha: true } );
+            // renderer.setSize( window.innerWidth, window.innerHeight );
             // renderer.setClearColor( 0x000000, 0);
-            renderer.setSize( window.innerWidth, window.innerHeight );
-            document.body.appendChild( renderer.domElement );
+            // document.body.appendChild( renderer.domElement );
 
 
-            var cube = createCube(new THREE.Vector3(0, 0, 0));
+            cube = createCube(new THREE.Vector3(0, 0, 0));
 
             camera.position.x = 0;
             camera.position.y = 0;
             camera.position.z = 5;
+
+            render();
 
         };
 
@@ -112,8 +123,6 @@ $(window).load(function() {
         $('#no_rtc').show();
     }
 
-
-
     var stat = new profiler();
 
     var gui,options,ctx,canvasWidth,canvasHeight;
@@ -127,9 +136,9 @@ $(window).load(function() {
     }
 
     function demo_app(videoWidth, videoHeight) {
-        canvasWidth  = canvas.width;
-        canvasHeight = canvas.height;
-        ctx = canvas.getContext('2d');
+        canvasWidth  = videoCanvas.width;
+        canvasHeight = videoCanvas.height;
+        ctx = videoCanvas.getContext('2d');
 
         ctx.fillStyle = "rgb(0,255,0)";
         ctx.strokeStyle = "rgb(0,255,0)";
@@ -193,7 +202,7 @@ $(window).load(function() {
     }
 
     function on_canvas_click(e) {
-        var coords = canvas.relMouseCoords(e);
+        var coords = videoCanvas.relMouseCoords(e);
         if(coords.x > 0 & coords.y > 0 & coords.x < canvasWidth & coords.y < canvasHeight) {
             curr_xy[point_count<<1] = coords.x;
             curr_xy[(point_count<<1)+1] = coords.y;
@@ -203,7 +212,12 @@ $(window).load(function() {
 
         createCube(new THREE.Vector3(0, 0, 0));
     }
-    canvas.addEventListener('click', on_canvas_click, false);
+
+    window.addEventListener("deviceorientation", function(event) {
+        deviceQuaternion = computeQuaternionFromEulers(event.alpha, event.beta, event.gamma);
+    }, true);
+
+    arCanvas.addEventListener('click', on_canvas_click, false);
 
     function draw_circle(ctx, x, y) {
         ctx.beginPath();
@@ -244,6 +258,58 @@ $(window).load(function() {
         return {x:canvasX, y:canvasY}
     }
     HTMLCanvasElement.prototype.relMouseCoords = relMouseCoords;
+
+    var render = function () {
+        console.log("in render");
+        geometry.colorsNeedUpdate = true;
+        requestAnimationFrame( render );
+    
+        //Update position
+        if(!position.equals(lastPosition)) {
+            console.log("setting object position: " + position.x + ", " + position.y + ", " + position.z);
+            cube.position.x = position.x;
+            cube.position.y = position.y;
+            cube.position.z = position.z;
+            lastPosition = position;
+        }
+    
+        // //Update rotation
+        if(deviceQuaternion != undefined) {
+            if(!lastDeviceQuaternion.equals(deviceQuaternion)) {
+                lastDeviceQuaternion = deviceQuaternion.clone();
+                var conjugate = deviceQuaternion.clone();
+                conjugate = conjugate.conjugate();
+                cube.setRotationFromQuaternion(conjugate);
+            }
+        }
+    
+        renderer.render(scene, camera);
+    };
+
+    var computeQuaternionFromEulers = function(alpha,beta,gamma) {
+        var x = degToRad(beta); // beta value
+        var y = degToRad(gamma); // gamma value
+        var z = degToRad(alpha); // alpha value
+    
+        //precompute to save on processing time
+        var cX = Math.cos( x/2 );
+        var cY = Math.cos( y/2 );
+        var cZ = Math.cos( z/2 );
+        var sX = Math.sin( x/2 );
+        var sY = Math.sin( y/2 );
+        var sZ = Math.sin( z/2 );
+    
+        var w = cX * cY * cZ - sX * sY * sZ;
+        var x = sX * cY * cZ - cX * sY * sZ;
+        var y = cX * sY * cZ + sX * cY * sZ;
+        var z = cX * cY * sZ + sX * sY * cZ;
+    
+        return new THREE.Quaternion(x, y, z, w);      
+    }
+
+    var degToRad = function(theta) {
+        return theta * (Math.PI / 180); //TODO This value should be precomputed
+    }
 
     $(window).unload(function() {
         video.pause();
