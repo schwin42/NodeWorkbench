@@ -3,20 +3,23 @@ console.log("init");
 var deviceQuaternion;
 var lastDeviceQuaternion = new THREE.Quaternion(0, 0, 0, 0);
 var deviceOrientationEulers = new THREE.Vector3();
-var gravityDirection = new THREE.Vector3();
+// var gravityDirection = new THREE.Vector3();
+
+var position = new THREE.Vector3(0, 0, 0);
+var lastPosition = new THREE.Vector3(-1, -1, -1);
 
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
-
 var renderer = new THREE.WebGLRenderer();
-renderer.setSize( window.innerWidth, window.innerHeight );
-document.body.appendChild( renderer.domElement );
 
 var geometry = new THREE.BoxGeometry( 1, 1, 1 );
 var material = new THREE.MeshBasicMaterial( { 
 	color: 0xffffff,
 	vertexColors: THREE.FaceColors
-	} );
+} );
+
+renderer.setSize( window.innerWidth, window.innerHeight );
+document.body.appendChild( renderer.domElement );
 
 var posX = new THREE.Color(1, 0, 0); //Red
 var negX = new THREE.Color(1, .6, .6); //Light red
@@ -26,6 +29,8 @@ var posZ = new THREE.Color(0, 0, 1); //Blue
 var negZ = new THREE.Color(0.6, 0.6, 1); //Light blue
 
 var createCube = function(position) {
+
+
 	geometry.faces[0].color = posX;
 	geometry.faces[1].color = posX;
 	geometry.faces[2].color = negX;
@@ -51,22 +56,24 @@ var createCube = function(position) {
 
 var cube = createCube(new THREE.Vector3(0, 0, 0));
 
-// var deviceOrientation = new THREE.DeviceOrientationControls(camera);
-
-// camera.position = new THREE.Vector3(0, 0, 5);
-// console.log("sumpin");
 camera.position.x = 0;
 camera.position.y = 0;
 camera.position.z = 5;
 
-var animate = function () {
+var render = function () {
+
 	geometry.colorsNeedUpdate = true;
-	requestAnimationFrame( animate );
-	
-	// cube.position.y += 0.01;
-	// cube.position.x += 0.01;
+	requestAnimationFrame( render );
 
-
+	//Update position
+	if(!position.equals(lastPosition)) {
+		console.log("setting object position: " + position.x + ", " + position.y + ", " + position.z);
+		cube.position.x = position.x;
+		cube.position.y = position.y;
+		cube.position.z = position.z;
+		// cube.position.set(position);
+		lastPosition = position;
+	}
 
 	if(deviceQuaternion != undefined) {
 
@@ -77,39 +84,20 @@ var animate = function () {
 			conjugate = conjugate.conjugate();
 			cube.setRotationFromQuaternion(conjugate);
 		}
-
-
-		// var rotObjectMatrix = new THREE.Matrix4();
-		// rotObjectMatrix.makeRotationFromQuaternion(conjugatedDeviceQuaternion);
-		// cube.quaternion.setFromRotationMatrix(rotObjectMatrix);
-
-
-
-		// console.log("grav" + gravityDirection.x + ", " + gravityDirection.y + ", " + gravityDirection.z);
-		// cube.lookAt(gravityDirection);
 	}
-
-	// cube.rotation.x = deviceOrientationEulers.x;
-	// cube.rotation.y = deviceOrientationEulers.y;
-	// cube.rotation.z = deviceOrientationEulers.z;
-
-	// cube.rotation.x += 0.01;
-	// cube.rotation.y += 0.01;
 
 	renderer.render(scene, camera);
 };
 
-animate();
+render();
 
-window.addEventListener("devicemotion", function(event) {
-	var accelerationVector = new THREE.Vector3(event.acceleration.x, event.acceleration.y, event.acceleration.z);
+// window.addEventListener("devicemotion", function(event) {
+// 	var accelerationVector = new THREE.Vector3(event.acceleration.x, event.acceleration.y, event.acceleration.z);
 
-	//console.log("acc" + accelerationVector.x + ", " + accelerationVector.y + ", " + accelerationVector.z);
-	//console.log("acc grav" + event.accelerationIncludingGravity.x + ", " + event.accelerationIncludingGravity.y + ", " + event.accelerationIncludingGravity.z);
-	var accelerationGravityVector = new THREE.Vector3(event.accelerationIncludingGravity.x, event.accelerationIncludingGravity.y, event.accelerationIncludingGravity.z);
+// 	var accelerationGravityVector = new THREE.Vector3(event.accelerationIncludingGravity.x, event.accelerationIncludingGravity.y, event.accelerationIncludingGravity.z);
 
-	gravityDirection = accelerationGravityVector.sub(accelerationVector);
-});
+// 	gravityDirection = accelerationGravityVector.sub(accelerationVector);
+// });
 
 window.addEventListener("deviceorientation", function(event) {
 
@@ -120,6 +108,31 @@ window.addEventListener("deviceorientation", function(event) {
 	// console.log("device quat: " + deviceQuaternion.x + ", " + deviceQuaternion.y + ", " + deviceQuaternion.z + ", " + deviceQuaternion.w);
 
 }, true);
+
+window.addEventListener('click', on_click, false);
+
+
+function on_click(e) {
+
+	var vector = new THREE.Vector3();
+	var mouse = new THREE.Vector2();
+	mouse.x = (e.x / window.innerWidth) * 2 -1;
+	mouse.y = - (e.y / window.innerHeight) * 2 + 1;
+
+	vector.set(mouse.x, mouse.y, 0.5);
+
+	vector.unproject(camera);
+
+	var dir = vector.sub(camera.position).normalize();
+	var targetZ = 0;
+	var distance = (targetZ - camera.position.z) / dir.z;
+	// var distance = - camera.position.z / dir.z;
+
+	position = camera.position.clone().add(dir.multiplyScalar(distance));
+
+	// var coords = window.relMouseCoords(e);
+	// console.log("coords: " + e.x);
+}
 
 var computeQuaternionFromEulers = function(alpha,beta,gamma) {
 	var x = degToRad(beta); // beta value
@@ -143,6 +156,6 @@ var computeQuaternionFromEulers = function(alpha,beta,gamma) {
 }
 
 var degToRad = function(theta) {
-	return theta * (Math.PI / 180);
+	return theta * (Math.PI / 180); //TODO This value should be precomputed
 }
 

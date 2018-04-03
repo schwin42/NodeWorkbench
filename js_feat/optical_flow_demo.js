@@ -1,12 +1,5 @@
 console.log("init");
 
-var columns = 90, rows = 6540, data_type = jsfeat.U8_t | jsfeat.C1_t;
-var my_matrix = new jsfeat.matrix_t(columns, rows, data_type);
-
-console.log("matrix: " + my_matrix.cols + ", " + my_matrix.rows);
-
-
-
 $(window).load(function() {
     "use strict";
 
@@ -139,8 +132,11 @@ $(window).load(function() {
     function on_canvas_click(e) {
         var coords = canvas.relMouseCoords(e);
         if(coords.x > 0 & coords.y > 0 & coords.x < canvasWidth & coords.y < canvasHeight) {
+            console.log("coords: " + coords.x + ", " + coords.y);
             curr_xy[point_count<<1] = coords.x;
             curr_xy[(point_count<<1)+1] = coords.y;
+            console.log("point count, bsed pc x, bsed pc y: " + point_count + ", " + (point_count << 1) + ", " + ((point_count<<1) +1) );
+
             point_count++;
         }
     }
