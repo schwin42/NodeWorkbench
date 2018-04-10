@@ -24,17 +24,13 @@ var material = new THREE.MeshBasicMaterial( {
 } );
 
 window.onload = function() {
+	//Add element to DOM
+	var threeJsCanvas = document.getElementById('threeJsCanvas');
+	console.log("canvas: " + threeJsCanvas)
+	renderer = new THREE.WebGLRenderer( { canvas: threeJsCanvas } );
+	debugCanvas = document.getElementById('debugCanvas');
 
-//Add element to DOM
-var threeJsCanvas = document.getElementById('threeJsCanvas');
-console.log("canvas: " + threeJsCanvas)
-renderer = new THREE.WebGLRenderer( { canvas: threeJsCanvas } );
-debugCanvas = document.getElementById('debugCanvas');
-
-
-// renderer.setSize( window.innerWidth, window.innerHeight );
-// document.body.appendChild( renderer.domElement );
-render();
+	render();
 }
 
 var posX = new THREE.Color(1, 0, 0); //Red
