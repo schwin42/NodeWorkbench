@@ -5,21 +5,37 @@ var lastDeviceQuaternion = new THREE.Quaternion(0, 0, 0, 0);
 var deviceOrientationEulers = new THREE.Vector3();
 // var gravityDirection = new THREE.Vector3();
 
+var accelerationVector = new THREE.Vector3(0, 0, 0);
+var estimatedVelocity = new THREE.Vector3(0, 0, 0);
+var estimatedPosition = new THREE.Vector3(0, 0, 0);
+
 var position = new THREE.Vector3(0, 0, 0);
 var lastPosition = new THREE.Vector3(-1, -1, -1);
 
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
-var renderer = new THREE.WebGLRenderer();
+var renderer;
+var debugCanvas;
 
 var geometry = new THREE.BoxGeometry( 1, 1, 1 );
-var material = new THREE.MeshBasicMaterial( { 
+var material = new THREE.MeshBasicMaterial( {
 	color: 0xffffff,
 	vertexColors: THREE.FaceColors
 } );
 
-renderer.setSize( window.innerWidth, window.innerHeight );
-document.body.appendChild( renderer.domElement );
+window.onload = function() {
+
+//Add element to DOM
+var threeJsCanvas = document.getElementById('threeJsCanvas');
+console.log("canvas: " + threeJsCanvas)
+renderer = new THREE.WebGLRenderer( { canvas: threeJsCanvas } );
+debugCanvas = document.getElementById('debugCanvas');
+
+
+// renderer.setSize( window.innerWidth, window.innerHeight );
+// document.body.appendChild( renderer.domElement );
+render();
+}
 
 var posX = new THREE.Color(1, 0, 0); //Red
 var negX = new THREE.Color(1, .6, .6); //Light red
@@ -54,6 +70,43 @@ var createCube = function(position) {
 	return cube;
 }
 
+var drawConsole = function() {
+		let ctx = debugCanvas.getContext('2d');
+	// 	let ctx = markerless.ctx;
+	// 	let tracking = markerless.tracking;
+	// 	let plane = markerless.plane;
+	// 	let canvas = markerless.canvas;
+	// 	let tvec = tracking.translation;
+		ctx.font = '30px Arial';
+		ctx.color = 'White';
+		//Make human readable
+		ctx.clearRect(0, 0, debugCanvas.width, debugCanvas.height);
+		// ctx.moveTo(150, 20);
+		ctx.textAlign = "end";
+		ctx.fillText(`x: ${accelerationVector.x.toFixed(2)}`, 200, 75);
+		ctx.fillText(`y: ${accelerationVector.y.toFixed(2)}`, 200, 105);
+		ctx.fillText(`z: ${accelerationVector.z.toFixed(2)}`, 200, 135);
+		// ctx.fillText(`x: ${tvec.x}`, 10, 75);
+		// ctx.fillText(`y: ${tvec.y}`, 10, 105);
+		// ctx.fillText(`z: ${tvec.z}`, 10, 135);
+		//what the user sees
+		// var roi = [...Array(6).keys()].map((v) => plane.get(v));
+		/* only useful when debugging to see the points in the downsampled canvas
+		var rectBuffer = [ planeBuffer.get(0), planeBuffer.get(1), planeBuffer.get(2), planeBuffer.get(3) ]; */
+		// let fillStyle = ctx.fillStyle;
+		ctx.fillStyle = '#44FF66';
+		ctx.color = 'White';
+
+		// var i = 0;
+		// for ( ; i < roi.length; i++) {
+		// 	ctx.beginPath();
+		// 	ctx.arc(roi[i].x, roi[i].y, 4, 0, 2 * Math.PI);
+		// 	//ctx.arc(rectBuffer[i].x, rectBuffer[i].y, 4, 0, 2 * Math.PI);
+		// 	ctx.fill();
+		// }
+		// ctx.fillStyle = fillStyle;
+	}
+
 var cube = createCube(new THREE.Vector3(0, 0, 0));
 
 camera.position.x = 0;
@@ -61,9 +114,11 @@ camera.position.y = 0;
 camera.position.z = 5;
 
 var render = function () {
-	console.log("in render");
 	geometry.colorsNeedUpdate = true;
 	requestAnimationFrame( render );
+
+	//Draw debug values
+	drawConsole();
 
 	//Update position
 	if(!position.equals(lastPosition)) {
@@ -86,25 +141,25 @@ var render = function () {
 	renderer.render(scene, camera);
 };
 
-console.log("pre render");
-render();
 
-// window.addEventListener("devicemotion", function(event) {
-// 	var accelerationVector = new THREE.Vector3(event.acceleration.x, event.acceleration.y, event.acceleration.z);
 
-// 	var accelerationGravityVector = new THREE.Vector3(event.accelerationIncludingGravity.x, event.accelerationIncludingGravity.y, event.accelerationIncludingGravity.z);
+window.addEventListener("devicemotion", function(event) {
+	console.log("estimated event: " + event.acceleration.x + ", " + event.acceleration.y + ", " + event.acceleration.z);
 
-// 	gravityDirection = accelerationGravityVector.sub(accelerationVector);
-// });
+	accelerationVector = new THREE.Vector3(event.acceleration.x, event.acceleration.y, event.acceleration.z);
+	// console.log("estimated acc: " + accelerationVector.x + ", " + accelerationVector.y + ", " + accelerationVector.z);
+
+	// var accelerationGravityVector = new THREE.Vector3(event.accelerationIncludingGravity.x, event.accelerationIncludingGravity.y, event.accelerationIncludingGravity.z);
+
+	// gravityDirection = accelerationGravityVector.sub(accelerationVector);
+	estimatedVelocity = estimatedVelocity.add(accelerationVector);
+	estimatedPosition = estimatedPosition.add(estimatedVelocity);
+	console.log("estimated velocity: " + estimatedVelocity.x + ", " + estimatedVelocity.y + ", " + estimatedVelocity.z);
+});
 
 window.addEventListener("deviceorientation", function(event) {
-
 	deviceOrientationEulers = new THREE.Vector3(degToRad(event.beta), degToRad(event.gamma), degToRad(event.alpha));
-	// console.log("device eulers: " + deviceOrientationEulers.x + ", " + deviceOrientationEulers.y + ", " + deviceOrientationEulers.z);
-
 	deviceQuaternion = computeQuaternionFromEulers(event.alpha, event.beta, event.gamma);
-	// console.log("device quat: " + deviceQuaternion.x + ", " + deviceQuaternion.y + ", " + deviceQuaternion.z + ", " + deviceQuaternion.w);
-
 }, true);
 
 window.addEventListener('click', on_click, false);
