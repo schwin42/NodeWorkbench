@@ -4,7 +4,7 @@ var deviceQuaternion;
 var lastDeviceQuaternion = new THREE.Quaternion(0, 0, 0, 0);
 var deviceOrientationEulers = new THREE.Vector3();
 // var gravityDirection = new THREE.Vector3();
-var isBleedingOff = false;
+// var isBleedingOff = false;
 
 var testX = 0;
 var testY = 0;
@@ -27,13 +27,14 @@ var debugCanvas;
 var yRotOffset;
 var orientationInitialized = false;
 
-var geometry = new THREE.BoxGeometry( 1, 1, 1 );
+var geometry = new THREE.BoxGeometry( 0.1, 0.1, 0.1 );
 
 window.onload = function() {
 	//Add element to DOM
 	var threeJsCanvas = document.getElementById('threeJsCanvas');
 	console.log("canvas: " + threeJsCanvas)
 	renderer = new THREE.WebGLRenderer( { canvas: threeJsCanvas } );
+	renderer.setSize(window.innerWidth, window.innerHeight);
 	debugCanvas = document.getElementById('debugCanvas');
 
 	lastUpdate = Date.now();
@@ -187,12 +188,12 @@ function round(number, precision) {
 
 // 	}
 // }
-var cube = createCube(new THREE.Vector3(-5, 0, 0), negX);
-var cube = createCube(new THREE.Vector3(5, 0, 0), posX);
-var cube = createCube(new THREE.Vector3(0, -5, 0), negY);
-var cube = createCube(new THREE.Vector3(0, 5, 0), posY);
-var cube = createCube(new THREE.Vector3(0, 0, -5), negZ);
-var cube = createCube(new THREE.Vector3(0, 0, 5), posZ);
+var cube = createCube(new THREE.Vector3(-1, 0, 0), negX);
+var cube = createCube(new THREE.Vector3(1, 0, 0), posX);
+var cube = createCube(new THREE.Vector3(0, -1, 0), negY);
+var cube = createCube(new THREE.Vector3(0, 1, 0), posY);
+var cube = createCube(new THREE.Vector3(0, 0, -1), negZ);
+var cube = createCube(new THREE.Vector3(0, 0, 1), posZ);
 
 camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
 camera.position.x = 0;
@@ -213,13 +214,15 @@ var render = function () {
 	drawConsole();
 
 	//Update camera position from acceleromter
-	// if(!camera.position.equals(lastPosition)) {
+	if(!camera.position.equals(lastPosition)) {
 	// 	console.log("printing position");
-	// 	camera.position.x = estimatedPosition.x;
-	// 	camera.position.y = estimatedPosition.y;
-	// 	camera.position.z = estimatedPosition.z;
-	// 	lastPosition = estimatedPosition;
-	// }
+
+		//Set position and fix axes
+		camera.position.x = estimatedPosition.x;
+		camera.position.y = estimatedPosition.y;
+		camera.position.z = estimatedPosition.z;
+		lastPosition = estimatedPosition;
+	}
 
 	//Update camera rotation from gyroscope
 	if(deviceQuaternion != undefined) {
@@ -252,10 +255,10 @@ window.addEventListener("devicemotion", function(event) {
 	estimatedVelocity.add(accelerationVector);
 
 	//Bleed off noise from velocity
-	let noiseConstant = 0.0005;
+	let noiseConstant = 0.001;
 
 	//If acceleration has same sign as velocity, adjust towards zero
-	// if(accelerationVector.x * estimatedVelocity.x > 0) { //If same sign
+	// if(accelerationVector.x * estimatedVelocity.x < 0) { //If different sign
 	// 	estimatedVelocity.x = estimatedVelocity.x > 0 ? estimatedVelocity.x - noiseConstant : estimatedVelocity.x + noiseConstant; //If positive, subtract noise; if negative, add noise
 	// 	isBleedingOff = true;
 	// } else {
@@ -273,29 +276,35 @@ window.addEventListener("devicemotion", function(event) {
 	//Update position in m/f
 	estimatedPosition.add(deltaPosition);
 
+	//Apply device quaternion to acceleration vector
+	accelerationVector = new THREE.Vector3(event.acceleration.x * deltaTime, event.acceleration.y * deltaTime, event.acceleration.z * deltaTime);
+	accelerationVector.applyQuaternion(deviceQuaternion);
+
 	//Acquire new acceleration
-	testX = event.acceleration.x * deltaTime;
-	testY = event.acceleration.y * deltaTime;
-	testZ = event.acceleration.z * deltaTime;
+	// accelerationVector = new THREE.Vector3(event.acceleration.x * deltaTime, event.acceleration.y * deltaTime, event.acceleration.z * deltaTime);
+	if(Math.abs(accelerationVector.x) > 0.01) {
+		console.log("x: " + accelerationVector.x);
+	}
+	if(Math.abs(accelerationVector.y) > 0.01) {
+		console.log("y: " + accelerationVector.y);
+	}
+	if(Math.abs(accelerationVector.z) > 0.01) {
+		console.log("z: " + accelerationVector.z);
+	}
 
-	// testX = round(event.acceleration.x * deltaTime, 2);
-	// testY = round(event.acceleration.y * deltaTime, 2);
-	// testZ = round(event.acceleration.z * deltaTime, 2);
 
-	accelerationVector = new THREE.Vector3(testX, testY, testZ);
 	// accelerationVector = new THREE.Vector3(Math.round(event.acceleration.x * deltaTime, 5), Math.round(event.acceleration.y * deltaTime, 5), Math.round(event.acceleration.z * deltaTime, 5));
 	// let roundedAcceleration = 
-
-
+	// console.log("x acc vel pos: " + accelerationVector.x + ", " + estimatedVelocity.x + ", " + estimatedPosition.x);
+	// console.log("acc vel pos: " + accelerationVector.x + ", " + accelerationVector.y + ", " + accelerationVector.z + " - " + estimatedVelocity.x + ", " + estimatedVelocity.y + ", " + estimatedVelocity.z + " - " + estimatedPosition.x + ", " + estimatedPosition.y + ", " + estimatedPosition.z);
 });
 
 window.addEventListener("deviceorientation", function(event) {
-	if(orientationInitialized) {
-		yRotOffset = e.alpha;
+	if(!orientationInitialized) {
+		yRotOffset = event.alpha;
 		orientationInitialized = true;
 	}
-
-	console.log(yRotOffset);
+	
 	deviceQuaternion = computeQuaternionFromEulers(event.alpha - yRotOffset, event.beta, event.gamma);
 }, true);
 
